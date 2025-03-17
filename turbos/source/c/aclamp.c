@@ -6,9 +6,6 @@
 #include <stdio.h>
 #endif
 
-// Destination is global variable for one-time allocation on heap.
-static unsigned char dst[12];
-	
 /*
  * Audio clamp.
  *
@@ -17,7 +14,7 @@ static unsigned char dst[12];
  * 12 bytes of output: CFIMMMCCCMML
  */
 
-int aclamp(unsigned char *src, unsigned char *dst, int src_size, unsigned char lcv, unsigned char ucv) {    
+int aclamp(unsigned char src[], unsigned char dst[], int src_size, unsigned char lcv, unsigned char ucv) {    
     for (int i = 0; i < src_size; i++) {
         // Compare the byte.
         if (src[i] < lcv) {

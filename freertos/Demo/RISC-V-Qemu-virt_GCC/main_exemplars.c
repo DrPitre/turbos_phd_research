@@ -28,45 +28,13 @@
 #include <FreeRTOS.h>
 #include <task.h>
 #define FREERTOS 1
-#include "../../../../phd/source/testbench/rlenc.c"
-#include "../../../../phd/source/testbench/rldec.c"
-#include "../../../../phd/source/testbench/aclamp.c"
+#include "../../../turbos/source/c/rlenc.c"
+#include "../../../turbos/source/c/rldec.c"
+#include "../../../turbos/source/c/aclamp.c"
+//#include "../../../../phd/source/testbench/rlenc.c"
+//#include "../../../../phd/source/testbench/rldec.c"
+//#include "../../../../phd/source/testbench/aclamp.c"
 
-static void prv_rlenc_task( void * pvParameters )
-{
-    /* Remove compiler warning about unused parameter. */
-    ( void ) pvParameters;
-
-    for( ; ; )
-    {
-        rlenc((unsigned char *)0x01, (unsigned char *)0x01, 1);
-    }
-}
-
-static void prv_rldec_task( void * pvParameters )
-{
-    /* Remove compiler warning about unused parameter. */
-    ( void ) pvParameters;
-
-    for( ; ; )
-    {
-        rldec((unsigned char *)0x01, (unsigned char *)0x01, 1);
-    }
-}
-
-static void prv_aclamp_task( void * pvParameters )
-{
-    /* Remove compiler warning about unused parameter. */
-    ( void ) pvParameters;
-
-    for( ; ; )
-    {
-        aclamp((unsigned char *)0x01, (unsigned char *)0x01, 1, 0x0a, 0x01);
-    }
-}
-
-
-/* Run a simple demo just prints 'Blink' */
 #define mainVECTOR_MODE_DIRECT    1
 #define mainQUEUE_RECEIVE_TASK_PRIORITY    ( tskIDLE_PRIORITY + 2 )
 #define mainQUEUE_SEND_TASK_PRIORITY       ( tskIDLE_PRIORITY + 1 )
@@ -99,11 +67,11 @@ int main( void )
 
     /* Start the two tasks as described in the comments at the top of this
      * file. */
-    xTaskCreate( prv_rlenc_task, "rlenc", configMINIMAL_STACK_SIZE * 2U, NULL,
+    xTaskCreate( rlenc_freertos, "rlenc", configMINIMAL_STACK_SIZE * 2U, NULL,
                  mainQUEUE_RECEIVE_TASK_PRIORITY, NULL );
-    xTaskCreate( prv_rldec_task, "rldec", configMINIMAL_STACK_SIZE * 2U, NULL,
+    xTaskCreate( rldec_freertos, "rldec", configMINIMAL_STACK_SIZE * 2U, NULL,
                  mainQUEUE_RECEIVE_TASK_PRIORITY, NULL );
-    xTaskCreate( prv_aclamp_task, "aclamp", configMINIMAL_STACK_SIZE * 2U, NULL,
+    xTaskCreate( aclamp_freertos, "aclamp", configMINIMAL_STACK_SIZE * 2U, NULL,
                  mainQUEUE_RECEIVE_TASK_PRIORITY, NULL );
     
     vTaskStartScheduler();
