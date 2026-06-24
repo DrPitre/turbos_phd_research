@@ -153,12 +153,18 @@ unsigned int __clzsi2(unsigned int x) {
 }
 
 void *memset(void *b, int c, size_t len) {
-    return NULL;
+    char *s = (char *)b;
+    while (len--) {
+        s[len] = c;
+    }
+    return b;
 }
 
 void *memcpy(void *restrict dst, const void *restrict src, size_t n) {
+    char *d = (char *)dst;
+    const char *s = (const char *)src;
+    while (n--) {
+        d[n] = s[n];
+    }
+    return dst;
 }
-
-int printf(const char * restrict format, ...) {
-}
-
