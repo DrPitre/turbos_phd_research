@@ -26,7 +26,7 @@
  *
  */
 
-/* GCC/HCS12 port by Jefferson L Smith, 2005 */
+/* CMOC/Turbo9 port, derived from GCC/HCS12 port by Jefferson L Smith, 2005 */
 
 /* Scheduler includes. */
 #include <cmoc.h>
@@ -34,7 +34,7 @@
 #include "task.h"
 
 /*-----------------------------------------------------------
- * Implementation of functions defined in portable.h for the HCS12 port.
+ * Implementation of functions defined in portable.h for the Turbo9 port.
  *----------------------------------------------------------*/
 
 
@@ -74,48 +74,44 @@ volatile UBaseType_t uxCriticalNesting = 0x80;  // un-initialized
  */
 StackType_t *pxPortInitialiseStack( StackType_t *pxTopOfStack, TaskFunction_t pxCode, void *pvParameters )
 {
+	/* Build the initial 6809 interrupt frame that portRESTORE_CONTEXT + RTI
+	   will consume when the task first runs.  Frame layout from [S] upward:
 
+	     [S+0]  CC        [S+1]  A        [S+2]  B        [S+3]  DP
+	     [S+4..5]  X      [S+6..7]  Y     [S+8..9]  U     [S+10..11]  PC
 
-	/* Setup the initial stack of the task.  The stack is set exactly as
-	expected by the portRESTORE_CONTEXT() macro.  In this case the stack as
-	expected by the HCS12 RTI instruction. */
+	   One extra byte below [S] holds the critical-nesting count, which
+	   portRESTORE_CONTEXT pops (via PULS A) before issuing RTI.
 
+	   Bytes are pushed from highest address down; the last push becomes [S]
+	   after portRESTORE_CONTEXT pops the nesting count. */
 
-	/* The address of the task function is placed in the stack byte at a time. */
-	*pxTopOfStack   = ( StackType_t ) *( ((StackType_t *) (&pxCode) ) + 1 );
-	*--pxTopOfStack = ( StackType_t ) *( ((StackType_t *) (&pxCode) ) + 0 );
+	/* PC: big-endian — MSB at lower address ([S+10]), LSB at higher ([S+11]). */
+	*pxTopOfStack   = ( StackType_t ) *( ((StackType_t *) (&pxCode) ) + 1 ); /* PC_LSB */
+	*--pxTopOfStack = ( StackType_t ) *( ((StackType_t *) (&pxCode) ) + 0 ); /* PC_MSB */
 
-	/* Next are all the registers that form part of the task context. */
-
-    /* U register */
-    *--pxTopOfStack = ( StackType_t ) 0xff;
-    *--pxTopOfStack = ( StackType_t ) 0xee;
-
-	/* Y register */
+	/* U, Y, X: debug sentinels only — values do not affect task execution. */
 	*--pxTopOfStack = ( StackType_t ) 0xff;
 	*--pxTopOfStack = ( StackType_t ) 0xee;
 
-	/* X register */
+	*--pxTopOfStack = ( StackType_t ) 0xff;
+	*--pxTopOfStack = ( StackType_t ) 0xee;
+
 	*--pxTopOfStack = ( StackType_t ) 0xdd;
 	*--pxTopOfStack = ( StackType_t ) 0xcc;
 
-	/* B register contains parameter high byte. */
-	*--pxTopOfStack = ( StackType_t ) *( ((StackType_t *) (&pvParameters) ) + 0 );
+	/* D (A:B) = pvParameters.  CMOC passes the first 16-bit argument in D
+	   where A holds the MSB and B holds the LSB.  RTI restores A from [S+1]
+	   and B from [S+2], so they must be pushed in the order: DP, B, A
+	   (DP lands at [S+3], B at [S+2], A at [S+1]). */
+	*--pxTopOfStack = ( StackType_t ) 0x00;                                         /* DP */
+	*--pxTopOfStack = ( StackType_t ) *( ((StackType_t *) (&pvParameters) ) + 1 );  /* B = LSB */
+	*--pxTopOfStack = ( StackType_t ) *( ((StackType_t *) (&pvParameters) ) + 0 );  /* A = MSB */
 
-	/* A register contains parameter low byte. */
-	*--pxTopOfStack = ( StackType_t ) *( ((StackType_t *) (&pvParameters) ) + 1 );
+	/* CCR: S bit set (stop disabled), I bit clear (IRQ enabled on task start). */
+	*--pxTopOfStack = ( StackType_t ) 0x80;
 
-    /* DP register contains parameter low byte. */
-    *--pxTopOfStack = ( StackType_t ) *( ((StackType_t *) (&pvParameters) ) + 1 );
-
-	/* CCR: Note that when the task starts interrupts will be enabled since
-	"I" bit of CCR is cleared */
-	*--pxTopOfStack = ( StackType_t ) 0x80;		// keeps Stop disabled (MCU default)
-
-	/* tmp softregs used by GCC. Values right now don't	matter. */
-
-	/* The critical nesting depth is initialised with 0 (meaning not in
-	a critical section). */
+	/* Critical nesting depth 0: not in a critical section. */
 	*--pxTopOfStack = ( StackType_t ) 0x00;
 
 	return pxTopOfStack;
@@ -178,15 +174,12 @@ void vPortYield( void )
 {
 	portISR_HEAD();
 	/* NOTE: This is the trap routine (swi) although not defined as a trap.
-	   It will fill the stack the same way as an ISR in order to mix preemtion
+	   It will fill the stack the same way as an ISR in order to mix preemption
 	   and cooperative yield. */
 
 	portSAVE_CONTEXT();
 	vTaskSwitchContext();
 	portRESTORE_CONTEXT();
-	asm {
-		cwai #^$50
-	}
 
 	portISR_TAIL();
 }

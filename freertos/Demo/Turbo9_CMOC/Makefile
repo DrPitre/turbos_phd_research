@@ -56,9 +56,17 @@ OBJS=$(RTOS_OBJS:.c=.o)
 OBJS_C_EXEMPLARS=$(RTOS_OBJS_C_EXEMPLARS:.c=.o)
 OBJS_ASM_EXEMPLARS=$(RTOS_OBJS_ASM_EXEMPLARS:.c=.o)
 
-all:	freertos_baseline.img freertos_c_exemplars.img
+RTOS_OBJS_TEST = main_test.c startup.c $(RTOS_BASEDIR)/portable/CMOC/Turbo9/port.c \
+  $(RTOS_BASEDIR)/portable/MemMang/heap_2.c \
+  $(RTOS_BASEDIR)/list.c \
+  $(RTOS_BASEDIR)/tasks.c
+
+OBJS_TEST=$(RTOS_OBJS_TEST:.c=.o)
+
+all:	freertos_baseline.img freertos_c_exemplars.img freertos_test.img
 	@ls -l freertos_baseline.obj
 	@ls -l freertos_c_exemplars.obj
+	@ls -l freertos_test.obj
 
 freertos_baseline.obj:	$(OBJS)
 	$(CC) -i $(LDFLAGS) --raw -o $@ $^ 
@@ -66,11 +74,20 @@ freertos_baseline.obj:	$(OBJS)
 freertos_c_exemplars.obj:	$(OBJS_C_EXEMPLARS)
 	$(CC) -i $(LDFLAGS) --raw -o $@ $^ 
 	
+freertos_test.obj:	$(OBJS_TEST)
+	$(CC) -i $(LDFLAGS) --raw -o $@ $^
+
+freertos_test.img: freertos_test.obj lastpage
+	dd if=/dev/zero of=zero.tmp bs=10240 count=1
+	cat zero.tmp freertos_test.obj > $@.tmp
+	os9 padrom -c=0 65280 $@.tmp
+	cat $@.tmp lastpage > $@
+
 freertos_asm_exemplars.obj:	$(OBJS_ASM_EXEMPLARS)
 	$(CC) -i $(LDFLAGS) --raw -o $@ $^ 
 	
 clean:
-	$(RM) $(OBJS) $(OBJS_C_EXEMPLARS) *.obj *.img *.rom *.tmp *.list *.map lastpage
+	$(RM) $(OBJS) $(OBJS_C_EXEMPLARS) $(OBJS_TEST) *.obj *.img *.rom *.tmp *.list *.map lastpage
 
 freertos_baseline.img: freertos_baseline.obj lastpage
 	dd if=/dev/zero of=zero.tmp bs=10240 count=1

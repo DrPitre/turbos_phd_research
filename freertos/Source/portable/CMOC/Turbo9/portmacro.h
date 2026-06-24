@@ -119,19 +119,11 @@ typedef unsigned char UBaseType_t;
 /* Task utilities. */
 
 /*
- * These macros are very simple as the processor automatically saves and
- * restores its registers as interrupts are entered and exited.  In
- * addition to the (automatically stacked) registers we also stack the
- * critical nesting count.  Each task maintains its own critical nesting
- * count as it is legitimate for a task to yield from within a critical
- * section.  If the banked memory model is being used then the PPAGE
- * register is also stored as part of the tasks context.
+ * These macros save/restore the task context and critical-nesting count
+ * around a context switch.  The 6809 hardware automatically saves/restores
+ * CC, A, B, DP, X, Y, U, PC on interrupt entry/exit (RTI), so only the
+ * critical-nesting count and stack pointer need explicit handling.
  */
-
-	/*
-	 * These macros are as per the BANKED versions above, but without saving
-	 * and restoring the PPAGE register.
-	 */
     #define portRESTORE_CONTEXT()                                   \
     {                                                               \
         extern volatile void * pxCurrentTCB;                        \
@@ -154,31 +146,11 @@ typedef unsigned char UBaseType_t;
         asm { sts 0,x } \
     }
 
-#define dumpRegs() { \
-    uint16_t *t = (uint16_t *)pxCurrentTCB; \
-    uint8_t *s = t[11]; \
-    printf("PC = %02X%02X\n", *(s++), *(s++)); \
-    }
-
-#define dumpRegs2() { \
-    uint16_t *t = (uint16_t *)pxCurrentTCB; \
-    printf("TCB Address = %04X\n", t); \
-    printf("S = %04X\n", t[0]); \
-    uint8_t *s = t[0]; \
-    printf("A   = %02X\n", *(s++)); \
-    printf("CC  = %02X, DP = %02X\n", *(s++), *(s++)); \
-    printf("D  = %02X%02X\n", *(s++), *(s++)); \
-    printf("X  = %02X%02X\n", *(s++), *(s++)); \
-    printf("Y  = %02X%02X\n", *(s++), *(s++)); \
-    printf("U  = %02X%02X\n", *(s++), *(s++)); \
-    char *addr = *s * 256 + *(s+1); \
-    printf("PC = %02X%02X\n", *(s++), *(s++)); \
-    printf("ADDR = %04X\n", addr); \
-    }
 
 /*
- * Utility macros to save/restore correct software registers for GCC. This is
- * useful when GCC does not generate appropriate ISR head/tail code.
+ * portISR_HEAD / portISR_TAIL bracket every ISR.  CMOC does not generate
+ * automatic ISR preamble/postamble code, so portISR_HEAD is empty and
+ * portISR_TAIL issues the RTI that returns from the interrupt.
  */
 #define portISR_HEAD()									\
 {											\
