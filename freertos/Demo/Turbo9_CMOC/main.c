@@ -25,7 +25,7 @@
  *
  */
 
-#define LAUNCH_DO_NOTHING_TASK
+#define LAUNCH_TERMINAL_TASK
 
 /*
  * main() creates all the application tasks, then starts the scheduler.
@@ -37,10 +37,31 @@
 #include "task.h"
 #include "cpu.h"
 
-#ifdef LAUNCH_DO_NOTHING_TASK
-void do_nothing_task(void *parameters) {
+#define HYPER9_TERM_OUT ( ( volatile unsigned char * ) 0xFF00 )
+
+static void hyper9_putchar( unsigned char c )
+{
+    *HYPER9_TERM_OUT = c;
+}
+
+static void hyper9_puts( const char *text )
+{
+    while( *text != '\0' )
+    {
+        hyper9_putchar( ( unsigned char ) *text );
+        text++;
+    }
+}
+
+#ifdef LAUNCH_TERMINAL_TASK
+void terminal_task(void *parameters) {
+    ( void ) parameters;
+
+    hyper9_puts( "FreeRTOS Turbo9 demo starting\r\n" );
+
     while (1) {
-        vTaskDelay(10);
+        hyper9_puts( "FreeRTOS task heartbeat\r\n" );
+        vTaskDelay(60);
     }
 }
 #endif
@@ -50,16 +71,21 @@ int ATTR_BANK0 main ( void )
 {
     BaseType_t ret;
     
-    #ifdef LAUNCH_DO_NOTHING_TASK
+    #ifdef LAUNCH_TERMINAL_TASK
         TaskHandle_t t1;
     
-        /* Start some of the standard demo tasks. */
-        ret = xTaskCreate(   do_nothing_task,
-                                        "EM",
+        ret = xTaskCreate(   terminal_task,
+                                        "TERM",
                                         64,
                                         NULL,
-                                        0,
+                                        1,
                                         ( TaskHandle_t * ) &t1 );
+
+        if( ret != pdPASS )
+        {
+            hyper9_puts( "xTaskCreate failed\r\n" );
+            for( ;; );
+        }
     #endif
 
 	vTaskStartScheduler();
