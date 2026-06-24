@@ -136,10 +136,8 @@ void supervisor_task(void *pvParameters)
                        test_results[2] == TEST_PASS)
                       ? TEST_PASS : TEST_FAIL;
 
-    /* Halt the Turbo9 simulator so the result bytes are stable.
-       BGND (begin-debug) causes the simulator to enter its monitor/halt state.
-       The infinite loop below is a fallback if BGND does not halt execution. */
-    asm { bgnd }
+    /* Halt: spin forever so results remain stable in memory.
+       Stop the simulator at any point and inspect test_results[]. */
     for (;;);
 }
 
@@ -153,7 +151,6 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
     (void)xTask;
     (void)pcTaskName;
     test_results[0] = TEST_FAIL;
-    asm { bgnd }
     for (;;);
 }
 

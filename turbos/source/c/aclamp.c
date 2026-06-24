@@ -14,7 +14,9 @@
  * 12 bytes of output: CFIMMMCCCMML
  */
 
-int aclamp(unsigned char src[], unsigned char dst[], int src_size, unsigned char lcv, unsigned char ucv) {    
+static unsigned char dst[32];
+
+int aclamp(unsigned char src[], unsigned char dst[], int src_size, unsigned char lcv, unsigned char ucv) {
     for (int i = 0; i < src_size; i++) {
         // Compare the byte.
         if (src[i] < lcv) {
